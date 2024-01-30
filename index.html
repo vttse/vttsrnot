@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLC Links Player</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        main {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            margin: auto;
+            margin-top: 20px;
+        }
+
+        label, input, button {
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .remove-button {
+            background-color: #ff4500;
+            color: white;
+        }
+
+        .search-button {
+            background-color: #4169e1;
+            color: white;
+        }
+
+        #movieContainer {
+            max-height: 400px;
+            overflow-y: scroll;
+        }
+
+        .movie-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .movie {
+            margin: 10px;
+            cursor: pointer;
+        }
+
+        .movie img {
+            width: 150px;
+            height: 225px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<main>
+    <!-- حقول إدخال الروابط -->
+    <label for="adminPassword">Admin Password:</label>
+    <input type="password" id="adminPassword" placeholder="Enter admin password">
+    <button onclick="toggleAdminFields()">Toggle Admin Fields</button>
+
+    <div id="adminFields" style="display: none;">
+        <label for="linkName">Link Name:</label>
+        <input type="text" id="linkName" placeholder="Enter link name">
+
+        <label for="linkURL">Link URL:</label>
+        <input type="text" id="linkURL" placeholder="Paste link URL here">
+
+        <label for="linkImage">Link Image URL:</label>
+        <input type="text" id="linkImage" placeholder="Paste link image URL here">
+
+        <!-- زر الحفظ -->
+        <button onclick="saveLink()">Save Link</button>
+
+        <hr>
+    </div>
+
+    <!-- حقل البحث -->
+    <label for="searchLink">Search Links:</label>
+    <input type="text" id="searchLink" placeholder="Search link by name" oninput="searchLinks()">
+    <!-- زر البحث -->
+    <button class="search-button" onclick="searchLinks()">Search</button>
+
+    <!-- حقل إزالة الرابط -->
+    <label for="removeLink">Remove Link:</label>
+    <input type="text" id="removeLink" placeholder="Enter link name to remove">
+    <!-- زر الإزالة -->
+    <button class="remove-button" onclick="removeLink()">Remove</button>
+
+    <!-- عرض الروابط -->
+    <div class="movie-container" id="movieContainer"></div>
+</main>
+
+<script>
+    var links = JSON.parse(localStorage.getItem('links')) || [];
+    var adminFieldsVisible = false;
+
+    function toggleAdminFields() {
+        var adminPasswordField = document.getElementById('adminPassword');
+        var adminFieldsDiv = document.getElementById('adminFields');
+
+        if (adminPasswordField.value === 'nonono0536786327flo') {
+            adminFieldsVisible = !adminFieldsVisible;
+            adminFieldsDiv.style.display = adminFieldsVisible ? 'block' : 'none';
+        } else {
+            alert('Incorrect password. Please try again.');
+        }
+
+        adminPasswordField.value = '';
+    }
+
+    function saveLink() {
+        var linkName = document.getElementById('linkName').value;
+        var linkURL = document.getElementById('linkURL').value;
+        var linkImage = document.getElementById('linkImage').value;
+        var searchQuery = document.getElementById('searchLink').value.toLowerCase();
+
+        if (linkName && linkURL && linkImage) {
+            var vlcLink = "vlc://" + linkURL;
+
+            if (!links.some(link => link.name === linkName)) {
+                links.push({ name: linkName, url: vlcLink, image: linkImage });
+
+                if (linkName.toLowerCase().includes(searchQuery) || !searchQuery) {
+                    updateMovies([links[links.length - 1]]);
+                }
+
+                localStorage.setItem('links', JSON.stringify(links));
+            } else {
+                alert('Link name already exists. Please choose a different name.');
+            }
+        } else {
+            alert('Please fill in all fields.');
+        }
+    }
+
+    function removeLink() {
+        var removeLinkName = document.getElementById('removeLink').value.toLowerCase();
+
+        if (removeLinkName) {
+            var indexToRemove = links.findIndex(link => link.name.toLowerCase() === removeLinkName);
+
+            if (indexToRemove !== -1) {
+                links.splice(indexToRemove, 1);
+                localStorage.setItem('links', JSON.stringify(links));
+                updateMovies();
+            } else {
+                alert('Link not found.');
+            }
+        } else {
+            alert('Please enter a link name to remove.');
+        }
+    }
+
+    function searchLinks() {
+        var searchQuery = document.getElementById('searchLink').value.toLowerCase();
+        var filteredLinks = links.filter(function(link) {
+            return link.name.toLowerCase().includes(searchQuery);
+        });
+
+        updateMovies(filteredLinks);
+    }
+
+    function playLink(linkURL) {
+        var vlcAnchor = document.createElement('a');
+        vlcAnchor.href = linkURL;
+
+        var clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        vlcAnchor.dispatchEvent(clickEvent);
+    }
+
+    function updateMovies(filteredLinks) {
+        var movieContainer = document.getElementById('movieContainer');
+        movieContainer.innerHTML = '';
+
+        var displayLinks = filteredLinks || links;
+
+        displayLinks.forEach(function(link) {
+            var movieElement = document.createElement('div');
+            movieElement.classList.add('movie');
+            movieElement.onclick = function() {
+                playLink(link.url);
+            };
+
+            var imageElement = document.createElement('img');
+            imageElement.src = link.image;
+
+            var nameElement = document.createElement('p');
+            nameElement.innerText = link.name;
+
+            var removeButton = document.createElement('button');
+            removeButton.innerText = 'Remove';
+            removeButton.classList.add('remove-button');
+            removeButton.onclick = function(event) {
+                event.stopPropagation(); //To prevent triggering the movieElement click event
+                removeLinkByName(link.name);
+            };
+
+            movieElement.appendChild(imageElement);
+            movieElement.appendChild(nameElement);
+            movieElement.appendChild(removeButton);
+            movieContainer.appendChild(movieElement);
+        });
+    }
+
+    function removeLinkByName(linkName) {
+        var indexToRemove = links.findIndex(link => link.name === linkName);
+
+        if (indexToRemove !== -1) {
+            links.splice(indexToRemove, 1);
+            localStorage.setItem('links', JSON.stringify(links));
+            updateMovies();
+        }
+    }
+
+    updateMovies();
+</script>
+
+</body>
+</html>
